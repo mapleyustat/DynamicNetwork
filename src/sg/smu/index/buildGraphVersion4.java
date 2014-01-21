@@ -30,6 +30,7 @@ import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.sql.Statement;
 import java.sql.Timestamp;
 import java.text.ParseException;
@@ -60,9 +61,9 @@ import org.apache.lucene.util.Version;
 import org.jgrapht.graph.SimpleDirectedGraph;
 
 import sg.cmu.analyzer.cmuAnalyzer;
-import sg.smu.feature.NetworkEdge;
 import sg.smu.util.AllDocCollector;
 import sg.smu.util.DBConnFactory;
+import sg.smu.util.NetworkEdge;
 import sg.smu.util.userNode;
 
 public class buildGraphVersion4 {
@@ -117,40 +118,53 @@ public class buildGraphVersion4 {
 		}
 	}
 	
-	private void initUserDegree() throws Exception{
-		
-		Class.forName("org.sqlite.JDBC");
-		Connection conn = DriverManager.getConnection("jdbc:sqlite:userDegree.db");
-		Statement stat = conn.createStatement();
-		ResultSet rs = stat.executeQuery("select * from userDegree;");
-		while(rs.next()) { 
-			userDegreeMap.put(rs.getString("user"), Integer.parseInt(rs.getString("degree")));
+	private void initUserDegree() {
+		try {
+			Class.forName("org.sqlite.JDBC");
+			Connection conn = DriverManager.getConnection("jdbc:sqlite:userDegree.db");
+			Statement stat = conn.createStatement();
+			ResultSet rs = stat.executeQuery("select * from userDegree;");
+			while(rs.next()) { 
+				userDegreeMap.put(rs.getString("user"), Integer.parseInt(rs.getString("degree")));
+			}
+			rs.close();
+			conn.close();
+			stat.close();
+		} catch (ClassNotFoundException e) {
+			System.err.println("init user degree error, make sure userDegree.db exists in the sibling directory with src.\n");
+			System.exit(-1);
+		} catch (SQLException e) {
+			System.err.println("init user degree error, make sure userDegree.db exists in the sibling directory with src.\n");
+			System.exit(-1);
 		}
-		rs.close();
-		conn.close();
-		stat.close();
 	}
 	
-	
-	private void initUserLink() throws Exception{
-		
-		Class.forName("org.sqlite.JDBC");
-		Connection conn = DriverManager.getConnection("jdbc:sqlite:userLinks.db");
-		Statement stat = conn.createStatement();
-		ResultSet rs = stat.executeQuery("select * from userFollow;");
-		
-		while(rs.next()) { 
-			HashSet<String> tmpSet = new HashSet<String>();
-			String[] splits = rs.getString("followlist").trim().split(" ");
-			for(int i=0;i<splits.length;i++){
-				if(splits[i].isEmpty()) { continue; }
-				tmpSet.add(splits[i]);
+	private void initUserLink() {
+		try {
+			Class.forName("org.sqlite.JDBC");
+			Connection conn = DriverManager.getConnection("jdbc:sqlite:userLinks.db");
+			Statement stat = conn.createStatement();
+			ResultSet rs = stat.executeQuery("select * from userFollow;");
+			
+			while(rs.next()) { 
+				HashSet<String> tmpSet = new HashSet<String>();
+				String[] splits = rs.getString("followlist").trim().split(" ");
+				for(int i=0;i<splits.length;i++){
+					if(splits[i].isEmpty()) { continue; }
+					tmpSet.add(splits[i]);
+				}
+				userLink.put(rs.getString("user"), tmpSet);
 			}
-			userLink.put(rs.getString("user"), tmpSet);
+			rs.close();
+			conn.close();
+			stat.close();
+		} catch (ClassNotFoundException e) {
+			System.err.println("init user link error, make sure userLinks.db exists in the sibling directory with src.\n");
+			System.exit(-1);
+		} catch (SQLException e) {
+			System.err.println("init user link error, make sure userLinks.db exists in the sibling directory with src.\n");
+			System.exit(-1);
 		}
-		rs.close();
-		conn.close();
-		stat.close();
 	}
 
 	public void build(String curvePath, String incrPath, String independPath) throws IOException{
